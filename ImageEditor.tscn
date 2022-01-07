@@ -55,6 +55,12 @@ margin_right = 78.0
 margin_bottom = 62.0
 text = "Make blue"
 
+[node name="Button3" type="Button" parent="HBoxContainer/VBoxContainer"]
+margin_top = 66.0
+margin_right = 78.0
+margin_bottom = 86.0
+text = "3x"
+
 [node name="VSeparator" type="VSeparator" parent="HBoxContainer"]
 margin_left = 82.0
 margin_right = 86.0
@@ -67,7 +73,14 @@ margin_bottom = 600.0
 size_flags_horizontal = 3
 
 [node name="TextureRect" type="TextureRect" parent="HBoxContainer/ScrollContainer"]
-stretch_mode = 3
+stretch_mode = 1
 
-[connection signal="pressed" from="HBoxContainer/VBoxContainer/Button" to="." method="_on_Button_pressed"]
-[connection signal="pressed" from="HBoxContainer/VBoxContainer/Button2" to="." method="_on_Button2_pressed"]
+[node name="ColorRect" type="ColorRect" parent="HBoxContainer/ScrollContainer/TextureRect"]
+show_behind_parent = true
+anchor_right = 1.0
+anchor_bottom = 1.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[connection signal="pressed" from="HBoxContainer/VBoxContainer/Button3" to="." method="_on_3x_button_pressed"]
