@@ -4,6 +4,7 @@ extends Control
 export(ImageTexture) var test_texture = null
 
 var editor_interface = null
+var editor_selection = null
 
 
 func _ready():
@@ -15,12 +16,32 @@ func _ready():
 	print(editor_interface)
 	#editor_interface.get_resource_previewer().connect('preview_invalidated', self, 'xxx')
 	if editor_interface != null:
+#		editor_interface.connect('scene_changed', self, '_on_scene_changed')
+		editor_interface.get_inspector().connect('object_id_selected', self, '_on_object_id_selected')
 		editor_interface.get_inspector().connect('property_edited', self, '_on_property_edited')
 		editor_interface.get_inspector().connect('property_selected', self, '_on_property_selected')
 		editor_interface.get_inspector().connect('resource_selected', self, '_on_resource_selected')
+		editor_selection = editor_interface.get_selection()
+		editor_selection.connect('selection_changed', self, '_on_selection_changed')
+		editor_interface.get_resource_previewer().connect('preview_invalidated', self, '_on_preview_invalidated')
 	elif test_texture != null:
 		find_node("TextureRect").texture = test_texture
 	#print(EditorPlugin.get_editor_interface())
+	
+	
+#func _on_scene_changed(node):
+#	print('_on_scene_changed ', node)
+
+
+func _on_preview_invalidated(path):
+	print('_on_preview_invalidated ', path)
+	
+
+func _on_selection_changed():
+	print('_on_selection_changed ', editor_selection.get_selected_nodes(), editor_interface.get_edited_scene_root())
+
+func _on_object_id_selected(id):
+	print('_on_object_id_selected ', id)
 
 
 func _on_property_edited(property):
@@ -67,4 +88,5 @@ func _force_color(color):
 #		texture.emit_changed()
 		#texture.flags = flags
 		#texture.emit_changed()
+		#editor_interface.save_scene()
 		
