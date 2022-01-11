@@ -23,8 +23,9 @@ image = SubResource( 5 )
 size = Vector2( 345, 405 )
 
 [sub_resource type="ShaderMaterial" id=3]
+resource_local_to_scene = true
 shader = ExtResource( 2 )
-shader_param/zoom = 9
+shader_param/zoom = 1
 
 [sub_resource type="ShaderMaterial" id=4]
 shader = ExtResource( 3 )
