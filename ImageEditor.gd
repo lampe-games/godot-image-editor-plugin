@@ -1,6 +1,8 @@
 tool
 extends Control
 
+enum State { PAN, DRAW, ERASE }
+
 export(ImageTexture) var image_texture = null
 
 var is_standalone = true
@@ -8,99 +10,106 @@ var is_standalone = true
 var _image_size = null
 var _zoom = 1
 var _dragging = false
-var _mode = 'draw'
-var _previous_mode = 'draw'
+var _state = null
 
 onready var _texture_rect = find_node("TextureRect")
 onready var _scroll_container = find_node("ScrollContainer")
-# onready var _grid_overlay = find_node("GridOverlay")
+onready var _zoom_label = find_node("Label")
+onready var _pan_button = find_node("PanButton")
+onready var _draw_button = find_node("DrawButton")
+onready var _erase_button = find_node("EraseButton")
+onready var _color_picker = find_node("ColorPickerButton")
 
 
 func _ready():
 	if Engine.editor_hint and is_standalone:
 		return
-	_texture_rect.texture = image_texture
-	# _grid_overlay.texture = image_texture
-	_image_size = image_texture.get_size()
 	assert(_image_size != Vector2.ZERO)
-	yield(get_tree(), "idle_frame")
-	#print(_texture_rect.rect_size)
-	assert(_image_size == _texture_rect.rect_size)
-	find_node("Label").text = _mode
+	_pan_button.connect("pressed", self, "_change_state", [State.PAN])
+	_draw_button.connect("pressed", self, "_change_state", [State.DRAW])
+	_erase_button.connect("pressed", self, "_change_state", [State.ERASE])
+	_change_state(State.PAN)
+	_update_zoom_label()
+	_texture_rect.texture = image_texture  # TODO: create new texture to clear flags
+	_image_size = image_texture.get_size()
 
 
-#func _force_color(color):
-#	var texture = find_node("TextureRect").texture
-#	if texture != null:
-#		var image = texture.get_data()
-#		image.lock()
-#		var cnt = 0
-#		for x in range(image.get_size().x):
-#			for y in range(image.get_size().y):
-#				if image.get_pixel(x, y).a > 0.0:
-#					image.set_pixel(x, y, color)
-#					if cnt == 0:
-#						print(image.get_pixel(x, y))
-#					cnt += 1
-#		image.unlock()
-#		print('done, cnt=', cnt)
-#		#image.emit_changed()
-#		texture.set_data(image)
-##		texture.emit_changed()
-##		var flags = texture.flags
-##		texture.flags = Texture.FLAGS_DEFAULT
-##		texture.emit_changed()
-#		#texture.flags = flags
-#		#texture.emit_changed()
-#		#editor_interface.save_scene()
+func _change_state(new_state):
+	var state_to_button_mapping = {
+		State.PAN: _pan_button,
+		State.DRAW: _draw_button,
+		State.ERASE: _erase_button,
+	}
+
+	if _state in state_to_button_mapping:
+		state_to_button_mapping[_state].find_node("Overlay").hide()
+
+	_state = new_state
+
+	if _state in state_to_button_mapping:
+		state_to_button_mapping[_state].find_node("Overlay").show()
+
+
+func _update_zoom_label():
+	_zoom_label.text = "Zoom: {0}".format([_zoom])
+
+
+func _event_position_to_pixel_position(event_position):
+	return (event_position / _zoom).floor()
+
+
+func _fill_pixel(pixel_position, color):
+	var image = image_texture.get_data()  # TODO: use _actual_texture
+	image.lock()
+	image.set_pixelv(pixel_position, color)
+	image.unlock()
+	image_texture.set_data(image)  # TODO: use _actual_texture
+	image_texture.emit_changed()  # TODO: use _actual_texture
+	# editor_interface.save_scene()  # TODO: consider forcing save
+
+
+func _draw_at_pos(event_position):
+	var pixel_position = _event_position_to_pixel_position(event_position)
+	_fill_pixel(pixel_position, _color_picker.color)
+
+
+func _erase_at_pos(event_position):
+	var pixel_position = _event_position_to_pixel_position(event_position)
+	_fill_pixel(pixel_position, Color.transparent)
 
 
 func _on_texture_rect_gui_input(event):
+	# TODO: refactor (extract)
 	if event is InputEventMouseMotion and _dragging:
 		_scroll_container.scroll_horizontal -= event.relative.x
 		_scroll_container.scroll_vertical -= event.relative.y
 		return
 	if not event is InputEventMouseButton:
 		return
-	if not event.is_pressed() and event.button_index == BUTTON_LEFT:
-		if _mode == 'draw':
-			print('d', event.position)
+	if event.is_pressed() and event.button_index == BUTTON_LEFT:
+		if _state == State.PAN:
+			_dragging = true
+		elif _state == State.DRAW:
+			_draw_at_pos(event.position)
+		elif _state == State.ERASE:
+			_erase_at_pos(event.position)
+	elif not event.is_pressed() and event.button_index == BUTTON_LEFT:
+		if _state == State.PAN:
+			_dragging = false
 	elif event.is_pressed() and event.button_index == BUTTON_WHEEL_UP:
 		_zoom += 1
 		_texture_rect.rect_size = _image_size * _zoom
 		_texture_rect.rect_min_size = _texture_rect.rect_size
-		_texture_rect.material.set_shader_param('zoom', _zoom)
+		_texture_rect.material.set_shader_param("zoom", _zoom)
+		_update_zoom_label()
 	elif event.is_pressed() and event.button_index == BUTTON_WHEEL_DOWN:
 		_zoom = max(1, _zoom - 1)
 		_texture_rect.rect_min_size = _image_size * _zoom
 		_texture_rect.rect_size = _texture_rect.rect_min_size
-		_texture_rect.material.set_shader_param('zoom', _zoom)
+		_texture_rect.material.set_shader_param("zoom", _zoom)
+		_update_zoom_label()
 	elif event.is_pressed() and event.button_index == BUTTON_MIDDLE:
 		_dragging = true
 	elif not event.is_pressed() and event.button_index == BUTTON_MIDDLE:
 		_dragging = false
 	get_tree().set_input_as_handled()
-
-
-func _on_draw_button_pressed():
-	_mode = "draw"
-	find_node("Label").text = _mode
-	pass # Replace with function body.
-
-
-func _on_erase_button_pressed():
-	_mode = "erase"
-	find_node("Label").text = _mode
-	pass # Replace with function body.
-
-
-func _on_color_picker_created():
-	_mode = "pick"
-	find_node("Label").text = _mode
-	pass # Replace with function body.
-
-
-func _on_color_picker_closed():
-	_mode = "xxx"
-	find_node("Label").text = _mode
-	pass # Replace with function body.
