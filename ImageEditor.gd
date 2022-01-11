@@ -14,11 +14,12 @@ var _state = null
 
 onready var _texture_rect = find_node("TextureRect")
 onready var _scroll_container = find_node("ScrollContainer")
-onready var _zoom_label = find_node("Label")
+onready var _zoom_label = find_node("ZoomLabel")
 onready var _pan_button = find_node("PanButton")
 onready var _draw_button = find_node("DrawButton")
 onready var _erase_button = find_node("EraseButton")
 onready var _color_picker = find_node("ColorPickerButton")
+onready var _panel = find_node("Panel")
 
 
 func _ready():
@@ -28,6 +29,8 @@ func _ready():
 	_pan_button.connect("pressed", self, "_change_state", [State.PAN])
 	_draw_button.connect("pressed", self, "_change_state", [State.DRAW])
 	_erase_button.connect("pressed", self, "_change_state", [State.ERASE])
+	_texture_rect.connect("gui_input", self, "_on_texture_rect_gui_input")
+	_panel.connect("gui_input", self, "_on_panel_gui_input")
 	_change_state(State.PAN)
 	_update_zoom_label()
 	_texture_rect.texture = image_texture  # TODO: create new texture to clear flags
@@ -78,6 +81,20 @@ func _erase_at_pos(event_position):
 	_fill_pixel(pixel_position, Color.transparent)
 
 
+func _try_handling_zoom_events(event):
+	if (
+		not event is InputEventMouseButton
+		or not event.is_pressed()
+		or not event.button_index in [BUTTON_WHEEL_UP, BUTTON_WHEEL_DOWN]
+	):
+		return
+	_zoom = max(1, _zoom + (1 if event.button_index == BUTTON_WHEEL_UP else -1))
+	_texture_rect.rect_min_size = _image_size * _zoom
+	_texture_rect.rect_size = _texture_rect.rect_min_size
+	_texture_rect.material.set_shader_param("zoom", _zoom)
+	_update_zoom_label()
+
+
 func _on_texture_rect_gui_input(event):
 	# TODO: refactor (extract)
 	if event is InputEventMouseMotion and _dragging:
@@ -96,20 +113,13 @@ func _on_texture_rect_gui_input(event):
 	elif not event.is_pressed() and event.button_index == BUTTON_LEFT:
 		if _state == State.PAN:
 			_dragging = false
-	elif event.is_pressed() and event.button_index == BUTTON_WHEEL_UP:
-		_zoom += 1
-		_texture_rect.rect_size = _image_size * _zoom
-		_texture_rect.rect_min_size = _texture_rect.rect_size
-		_texture_rect.material.set_shader_param("zoom", _zoom)
-		_update_zoom_label()
-	elif event.is_pressed() and event.button_index == BUTTON_WHEEL_DOWN:
-		_zoom = max(1, _zoom - 1)
-		_texture_rect.rect_min_size = _image_size * _zoom
-		_texture_rect.rect_size = _texture_rect.rect_min_size
-		_texture_rect.material.set_shader_param("zoom", _zoom)
-		_update_zoom_label()
 	elif event.is_pressed() and event.button_index == BUTTON_MIDDLE:
 		_dragging = true
 	elif not event.is_pressed() and event.button_index == BUTTON_MIDDLE:
 		_dragging = false
+	_try_handling_zoom_events(event)
 	get_tree().set_input_as_handled()
+
+
+func _on_panel_gui_input(event):
+	_try_handling_zoom_events(event)

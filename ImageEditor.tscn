@@ -24,7 +24,7 @@ size = Vector2( 345, 405 )
 
 [sub_resource type="ShaderMaterial" id=3]
 shader = ExtResource( 2 )
-shader_param/zoom = 14
+shader_param/zoom = 2
 
 [sub_resource type="ShaderMaterial" id=4]
 shader = ExtResource( 3 )
@@ -120,13 +120,13 @@ margin_right = 92.0
 margin_bottom = 600.0
 size_flags_vertical = 3
 
-[node name="Panel2" type="Panel" parent="HBoxContainer"]
+[node name="Panel" type="Panel" parent="HBoxContainer"]
 margin_left = 96.0
 margin_right = 1024.0
 margin_bottom = 600.0
 size_flags_horizontal = 3
 
-[node name="ScrollContainer" type="ScrollContainer" parent="HBoxContainer/Panel2"]
+[node name="ScrollContainer" type="ScrollContainer" parent="HBoxContainer/Panel"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
@@ -135,13 +135,13 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="CenterContainer" type="CenterContainer" parent="HBoxContainer/Panel2/ScrollContainer"]
+[node name="CenterContainer" type="CenterContainer" parent="HBoxContainer/Panel/ScrollContainer"]
 margin_right = 928.0
 margin_bottom = 600.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="TextureRect" type="TextureRect" parent="HBoxContainer/Panel2/ScrollContainer/CenterContainer"]
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer/Panel/ScrollContainer/CenterContainer"]
 material = SubResource( 3 )
 margin_left = 464.0
 margin_top = 300.0
@@ -151,7 +151,7 @@ mouse_filter = 0
 mouse_default_cursor_shape = 3
 stretch_mode = 1
 
-[node name="CheckerboardBackground" type="ColorRect" parent="HBoxContainer/Panel2/ScrollContainer/CenterContainer/TextureRect"]
+[node name="CheckerboardBackground" type="ColorRect" parent="HBoxContainer/Panel/ScrollContainer/CenterContainer/TextureRect"]
 show_behind_parent = true
 material = SubResource( 4 )
 anchor_right = 1.0
@@ -161,7 +161,7 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/Panel2"]
+[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/Panel"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
@@ -171,7 +171,7 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="Label" type="Label" parent="HBoxContainer/Panel2/MarginContainer"]
+[node name="ZoomLabel" type="Label" parent="HBoxContainer/Panel/MarginContainer"]
 margin_left = 861.0
 margin_top = 572.0
 margin_right = 914.0
@@ -183,7 +183,7 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="Background" type="ColorRect" parent="HBoxContainer/Panel2/MarginContainer/Label"]
+[node name="Background" type="ColorRect" parent="HBoxContainer/Panel/MarginContainer/ZoomLabel"]
 show_behind_parent = true
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -191,5 +191,3 @@ color = Color( 0, 0, 0, 0.5 )
 __meta__ = {
 "_edit_use_anchors_": false
 }
-
-[connection signal="gui_input" from="HBoxContainer/Panel2/ScrollContainer/CenterContainer/TextureRect" to="." method="_on_texture_rect_gui_input"]
