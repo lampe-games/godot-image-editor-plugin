@@ -24,7 +24,7 @@ size = Vector2( 345, 405 )
 
 [sub_resource type="ShaderMaterial" id=3]
 shader = ExtResource( 2 )
-shader_param/zoom = 2
+shader_param/zoom = 9
 
 [sub_resource type="ShaderMaterial" id=4]
 shader = ExtResource( 3 )

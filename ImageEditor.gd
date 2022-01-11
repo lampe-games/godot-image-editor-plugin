@@ -1,12 +1,15 @@
 tool
 extends Control
 
+const INTERNAL_TEXTURE_FLAGS = 0
+
 enum State { PAN, DRAW, ERASE }
 
 export(ImageTexture) var image_texture = null
 
 var is_standalone = true
 
+var _actual_texture = null
 var _image_size = null
 var _zoom = 1
 var _dragging = false
@@ -25,6 +28,7 @@ onready var _panel = find_node("Panel")
 func _ready():
 	if Engine.editor_hint and is_standalone:
 		return
+	_image_size = image_texture.get_size()
 	assert(_image_size != Vector2.ZERO)
 	_pan_button.connect("pressed", self, "_change_state", [State.PAN])
 	_draw_button.connect("pressed", self, "_change_state", [State.DRAW])
@@ -32,9 +36,10 @@ func _ready():
 	_texture_rect.connect("gui_input", self, "_on_texture_rect_gui_input")
 	_panel.connect("gui_input", self, "_on_panel_gui_input")
 	_change_state(State.PAN)
+	_actual_texture = ImageTexture.new()
+	_actual_texture.create_from_image(image_texture.get_data(), INTERNAL_TEXTURE_FLAGS)
+	_texture_rect.texture = _actual_texture
 	_update_zoom_label()
-	_texture_rect.texture = image_texture  # TODO: create new texture to clear flags
-	_image_size = image_texture.get_size()
 
 
 func _change_state(new_state):
@@ -62,12 +67,14 @@ func _event_position_to_pixel_position(event_position):
 
 
 func _fill_pixel(pixel_position, color):
-	var image = image_texture.get_data()  # TODO: use _actual_texture
+	var image = _actual_texture.get_data()
 	image.lock()
 	image.set_pixelv(pixel_position, color)
 	image.unlock()
-	image_texture.set_data(image)  # TODO: use _actual_texture
-	image_texture.emit_changed()  # TODO: use _actual_texture
+	image_texture.set_data(image)
+	_actual_texture.set_data(image)
+	image_texture.emit_changed()
+	_actual_texture.emit_changed()
 	# editor_interface.save_scene()  # TODO: consider forcing save
 
 
