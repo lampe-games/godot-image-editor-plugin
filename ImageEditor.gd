@@ -1,9 +1,9 @@
 tool
 extends Control
 
-const INTERNAL_TEXTURE_FLAGS = 0
-
 enum State { PAN, DRAW, ERASE }
+
+const INTERNAL_TEXTURE_FLAGS = 0
 
 export(ImageTexture) var image_texture = null
 
@@ -13,6 +13,8 @@ var _actual_texture = null
 var _image_size = null
 var _zoom = 1
 var _dragging = false
+var _drawing_reference_pos = null
+var _erasing_reference_pos = null
 var _state = null
 
 onready var _texture_rect = find_node("TextureRect")
@@ -67,6 +69,13 @@ func _event_position_to_pixel_position(event_position):
 
 
 func _fill_pixel(pixel_position, color):
+	if (
+		pixel_position.x < 0
+		or pixel_position.x >= _image_size.x
+		or pixel_position.y < 0
+		or pixel_position.y >= _image_size.y
+	):
+		return
 	var image = _actual_texture.get_data()
 	image.lock()
 	image.set_pixelv(pixel_position, color)
@@ -88,6 +97,20 @@ func _erase_at_pos(event_position):
 	_fill_pixel(pixel_position, Color.transparent)
 
 
+func _try_handling_motion_events(event):
+	if not event is InputEventMouseMotion:
+		return
+	if _dragging:
+		_scroll_container.scroll_horizontal -= event.relative.x
+		_scroll_container.scroll_vertical -= event.relative.y
+	elif _drawing_reference_pos != null:
+		_drawing_reference_pos += event.relative
+		_draw_at_pos(_drawing_reference_pos)
+	elif _erasing_reference_pos != null:
+		_erasing_reference_pos += event.relative
+		_erase_at_pos(_erasing_reference_pos)
+
+
 func _try_handling_zoom_events(event):
 	if (
 		not event is InputEventMouseButton
@@ -104,10 +127,7 @@ func _try_handling_zoom_events(event):
 
 func _on_texture_rect_gui_input(event):
 	# TODO: refactor (extract)
-	if event is InputEventMouseMotion and _dragging:
-		_scroll_container.scroll_horizontal -= event.relative.x
-		_scroll_container.scroll_vertical -= event.relative.y
-		return
+	_try_handling_motion_events(event)
 	if not event is InputEventMouseButton:
 		return
 	if event.is_pressed() and event.button_index == BUTTON_LEFT:
@@ -115,11 +135,17 @@ func _on_texture_rect_gui_input(event):
 			_dragging = true
 		elif _state == State.DRAW:
 			_draw_at_pos(event.position)
+			_drawing_reference_pos = event.position
 		elif _state == State.ERASE:
 			_erase_at_pos(event.position)
+			_erasing_reference_pos = event.position
 	elif not event.is_pressed() and event.button_index == BUTTON_LEFT:
 		if _state == State.PAN:
 			_dragging = false
+		elif _state == State.DRAW:
+			_drawing_reference_pos = null
+		elif _state == State.ERASE:
+			_erasing_reference_pos = null
 	elif event.is_pressed() and event.button_index == BUTTON_MIDDLE:
 		_dragging = true
 	elif not event.is_pressed() and event.button_index == BUTTON_MIDDLE:
