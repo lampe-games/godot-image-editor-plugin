@@ -26,6 +26,8 @@ onready var _pan_button = find_node("PanButton")
 onready var _draw_button = find_node("DrawButton")
 onready var _erase_button = find_node("EraseButton")
 onready var _color_picker = find_node("ColorPickerButton")
+onready var _resize_button = find_node("ResizeButton")
+onready var _resize_window = find_node("ResizeWindow")
 onready var _panel = find_node("Panel")
 
 
@@ -37,6 +39,7 @@ func _ready():
 	_pan_button.connect("pressed", self, "_change_state", [State.PAN])
 	_draw_button.connect("pressed", self, "_change_state", [State.DRAW])
 	_erase_button.connect("pressed", self, "_change_state", [State.ERASE])
+	_resize_button.connect("pressed", self, "_on_resize_button_pressed")
 	_texture_rect.connect("gui_input", self, "_on_texture_rect_gui_input")
 	_panel.connect("gui_input", self, "_on_panel_gui_input")
 	_panel.connect("resized", self, "_on_panel_resized")
@@ -180,3 +183,7 @@ func _on_panel_resized():
 	var desired_zoom_xy = available_rect / _image_size
 	var desired_zoom = floor(min(desired_zoom_xy.x, desired_zoom_xy.y))
 	_set_zoom(desired_zoom, false)
+
+
+func _on_resize_button_pressed():
+	_resize_window.popup_centered()
