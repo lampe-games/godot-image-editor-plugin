@@ -4,6 +4,7 @@ extends Control
 enum State { PAN, DRAW, ERASE }
 
 const INTERNAL_TEXTURE_FLAGS = 0
+const RECT_MARGIN_FOR_INITIAL_ZOOM = 10
 
 export(ImageTexture) var image_texture = null
 
@@ -12,6 +13,7 @@ var is_standalone = true
 var _actual_texture = null
 var _image_size = null
 var _zoom = 1
+var _zoom_altered = false
 var _dragging = false
 var _drawing_reference_pos = null
 var _erasing_reference_pos = null
@@ -37,6 +39,7 @@ func _ready():
 	_erase_button.connect("pressed", self, "_change_state", [State.ERASE])
 	_texture_rect.connect("gui_input", self, "_on_texture_rect_gui_input")
 	_panel.connect("gui_input", self, "_on_panel_gui_input")
+	_panel.connect("resized", self, "_on_panel_resized")
 	_change_state(State.PAN)
 	_actual_texture = ImageTexture.new()
 	_actual_texture.create_from_image(image_texture.get_data(), INTERNAL_TEXTURE_FLAGS)
@@ -97,6 +100,17 @@ func _erase_at_pos(event_position):
 	_fill_pixel(pixel_position, Color.transparent)
 
 
+func _set_zoom(zoom, mark_altered):
+	var zoom_before = _zoom
+	_zoom = max(1, zoom)
+	if mark_altered and _zoom != zoom_before:
+		_zoom_altered = true
+	_texture_rect.rect_min_size = _image_size * _zoom
+	_texture_rect.rect_size = _texture_rect.rect_min_size
+	_texture_rect.material.set_shader_param("zoom", _zoom)
+	_update_zoom_label()
+
+
 func _try_handling_motion_events(event):
 	if not event is InputEventMouseMotion:
 		return
@@ -118,11 +132,7 @@ func _try_handling_zoom_events(event):
 		or not event.button_index in [BUTTON_WHEEL_UP, BUTTON_WHEEL_DOWN]
 	):
 		return
-	_zoom = max(1, _zoom + (1 if event.button_index == BUTTON_WHEEL_UP else -1))
-	_texture_rect.rect_min_size = _image_size * _zoom
-	_texture_rect.rect_size = _texture_rect.rect_min_size
-	_texture_rect.material.set_shader_param("zoom", _zoom)
-	_update_zoom_label()
+	_set_zoom(_zoom + (1 if event.button_index == BUTTON_WHEEL_UP else -1), true)
 
 
 func _on_texture_rect_gui_input(event):
@@ -156,3 +166,17 @@ func _on_texture_rect_gui_input(event):
 
 func _on_panel_gui_input(event):
 	_try_handling_zoom_events(event)
+
+
+func _on_panel_resized():
+	if _zoom_altered:
+		return
+	var available_rect = _panel.rect_size
+	if (
+		available_rect.x <= RECT_MARGIN_FOR_INITIAL_ZOOM * 2
+		and available_rect.y <= RECT_MARGIN_FOR_INITIAL_ZOOM * 2
+	):
+		available_rect -= Vector2(RECT_MARGIN_FOR_INITIAL_ZOOM, RECT_MARGIN_FOR_INITIAL_ZOOM) * 2
+	var desired_zoom_xy = available_rect / _image_size
+	var desired_zoom = floor(min(desired_zoom_xy.x, desired_zoom_xy.y))
+	_set_zoom(desired_zoom, false)
