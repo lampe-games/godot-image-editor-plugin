@@ -10,7 +10,7 @@ export(ImageTexture) var image_texture = null
 
 var is_standalone = true
 
-var _actual_texture = null
+var _local_texture = null
 var _image_size = null
 var _zoom = 1
 var _zoom_altered = false
@@ -29,6 +29,7 @@ onready var _color_picker = find_node("ColorPickerButton")
 onready var _resize_button = find_node("ResizeButton")
 onready var _resize_window = find_node("ResizeWindow")
 onready var _panel = find_node("Panel")
+onready var _stats_label = find_node("StatsLabel")
 
 
 func _ready():
@@ -44,10 +45,11 @@ func _ready():
 	_panel.connect("gui_input", self, "_on_panel_gui_input")
 	_panel.connect("resized", self, "_on_panel_resized")
 	_change_state(State.PAN)
-	_actual_texture = ImageTexture.new()
-	_actual_texture.create_from_image(image_texture.get_data(), INTERNAL_TEXTURE_FLAGS)
-	_texture_rect.texture = _actual_texture
+	_local_texture = ImageTexture.new()
+	_local_texture.create_from_image(image_texture.get_data(), INTERNAL_TEXTURE_FLAGS)
+	_texture_rect.texture = _local_texture
 	_update_zoom_label()
+	_update_stats_label()
 
 
 func _change_state(new_state):
@@ -70,6 +72,52 @@ func _update_zoom_label():
 	_zoom_label.text = "Zoom: {0}".format([_zoom])
 
 
+func _update_stats_label():
+	var image = _local_texture.get_data()
+	var image_size = image.get_size()
+	var image_format_to_str_mapping = {
+		0: "L8",
+		1: "LA8",
+		2: "R8",
+		3: "RG8",
+		4: "RGB8",
+		5: "RGBA8",
+		6: "RGBA4444",
+		7: "RGBA5551",
+		8: "RF",
+		9: "RGF",
+		10: "RGBF",
+		11: "RGBAF",
+		12: "RH",
+		13: "RGH",
+		14: "RGBH",
+		15: "RGBAH",
+		16: "RGBE9995",
+		17: "DXT1",
+		18: "DXT3",
+		19: "DXT5",
+		20: "RGTC_R",
+		21: "RGTC_RG",
+		22: "BPTC_RGBA",
+		23: "BPTC_RGBF",
+		24: "BPTC_RGBFU",
+		25: "PVRTC2",
+		26: "PVRTC2A",
+		27: "PVRTC4",
+		28: "PVRTC4A",
+		29: "ETC",
+		30: "ETC2_R11",
+		31: "ETC2_R11S",
+		32: "ETC2_RG11",
+		33: "ETC2_RG11S",
+		34: "ETC2_RGB8",
+		35: "ETC2_RGBA8",
+		36: "ETC2_RGB8A1",
+	}
+	var image_format_str = image_format_to_str_mapping.get(image.get_format(), "UNKNOWN")
+	_stats_label.text = "w: {0}\nh: {1}\n{2}".format([image_size.x, image_size.y, image_format_str])
+
+
 func _event_position_to_pixel_position(event_position):
 	return (event_position / _zoom).floor()
 
@@ -82,14 +130,14 @@ func _fill_pixel(pixel_position, color):
 		or pixel_position.y >= _image_size.y
 	):
 		return
-	var image = _actual_texture.get_data()
+	var image = _local_texture.get_data()
 	image.lock()
 	image.set_pixelv(pixel_position, color)
 	image.unlock()
 	image_texture.set_data(image)
-	_actual_texture.set_data(image)
+	_local_texture.set_data(image)
 	image_texture.emit_changed()
-	_actual_texture.emit_changed()
+	_local_texture.emit_changed()
 	# editor_interface.save_scene()  # TODO: consider forcing save
 
 
