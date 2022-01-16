@@ -36,20 +36,36 @@ func _ready():
 	if Engine.editor_hint and is_standalone:
 		return
 	_properties_window.is_standalone = false
-	if image_texture.get_size() == Vector2.ZERO or image_texture.get_data() == null:
-		return
+	_properties_button.connect("pressed", self, "_on_properties_button_pressed")
+	_properties_window.connect("image_properties_changed", self, "_on_image_properties_changed")
+	_stats_label.text = ""
+	if image_texture.get_size() != Vector2.ZERO and image_texture.get_data() != null:
+		_image = image_texture.get_data()
+		_initialize()
+
+
+func _initialize():
 	_pan_button.connect("pressed", self, "_change_state", [State.PAN])
 	_draw_button.connect("pressed", self, "_change_state", [State.DRAW])
 	_erase_button.connect("pressed", self, "_change_state", [State.ERASE])
-	_properties_button.connect("pressed", self, "_on_properties_button_pressed")
 	_texture_rect.connect("gui_input", self, "_on_texture_rect_gui_input")
 	_panel.connect("gui_input", self, "_on_panel_gui_input")
 	_panel.connect("resized", self, "_on_panel_resized")
-	_properties_window.connect("image_properties_changed", self, "_on_image_properties_changed")
+	_unlock_controls()
 	_change_state(State.PAN)
 	_setup_local_texture()
 	_update_zoom_label()
 	_update_stats_label()
+
+
+func _unlock_controls():
+	for control in [
+		_pan_button,
+		_draw_button,
+		_erase_button,
+		_color_picker,
+	]:
+		control.disabled = false
 
 
 func _change_state(new_state):
@@ -70,7 +86,6 @@ func _change_state(new_state):
 
 func _setup_local_texture():
 	_local_texture = ImageTexture.new()
-	_image = image_texture.get_data()
 	_local_texture.create_from_image(_image, INTERNAL_TEXTURE_FLAGS)
 	_texture_rect.texture = _local_texture
 
@@ -137,12 +152,11 @@ func _fill_pixel(pixel_position, color):
 		or pixel_position.y >= _image.get_size().y
 	):
 		return
-	var image = _local_texture.get_data()
-	image.lock()
-	image.set_pixelv(pixel_position, color)
-	image.unlock()
-	image_texture.set_data(image)
-	_local_texture.set_data(image)
+	_image.lock()
+	_image.set_pixelv(pixel_position, color)
+	_image.unlock()
+	image_texture.set_data(_image)
+	_local_texture.set_data(_image)
 	image_texture.emit_changed()
 	_local_texture.emit_changed()
 
@@ -245,7 +259,10 @@ func _on_properties_button_pressed():
 
 
 func _on_image_properties_changed(image):
+	var initialization_required = _image == null
 	_image = image
+	if initialization_required:
+		_initialize()
 	image_texture.create_from_image(_image, image_texture.flags)
 	_local_texture.create_from_image(_image, _local_texture.flags)
 	image_texture.emit_changed()
