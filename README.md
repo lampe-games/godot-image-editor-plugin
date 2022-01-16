@@ -9,8 +9,11 @@ Simple plugin for editing `ImageTexture` resources pixel by pixel.
 This plugin provides following capabilities:
 
 * Drawing and erasing pixels of `ImageTexture` resources
+* Zooming and panning (using mouse wheel)
 * Resizing `ImageTexture` resources
 * Creating `ImageTexture` resources from scratch (by resizing empty `ImageTexture` resource)
+* Saving changes by `Ctrl + S`
+* Godot 3 support
 
 ## Caveats
 
@@ -29,10 +32,14 @@ This plugin has no `undo` mechanism yet so the `resize` operation must be used w
 After enabling the plugin in the `Project Settings`, click `Edit` on any `ImageTexture` resource and the `Image Editor` section will be added to the editor's bottom panel next to `Output`, `Debugger` etc.
 
 ![edit](./media/edit.png "edit")
-![overview](./media/overview.png "overview")
+![overview2](./media/overview2.png "overview2")
 
-In case you don't have any `ImageTexture` resource available, you need to create one before you can `Edit` it.
+In case you don't have any `ImageTexture` resource available, you will need to create one before you can `Edit` it.
 
 ![new](./media/new.png "new")
 
 If you've created `ImageTexture` from scratch, you will have to use `Properties` button within `Image Editor` to resize (and hence create) the underlying `Image`.
+
+## Saving changes
+
+To actually force saving changes made, you need to use `Ctrl + S` shortcut.
