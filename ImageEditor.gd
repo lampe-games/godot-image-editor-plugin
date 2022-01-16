@@ -11,7 +11,7 @@ export(ImageTexture) var image_texture = null
 var is_standalone = true
 
 var _local_texture = null
-var _image_size = null
+var _image = null
 var _zoom = 1
 var _zoom_altered = false
 var _dragging = false
@@ -26,8 +26,8 @@ onready var _pan_button = find_node("PanButton")
 onready var _draw_button = find_node("DrawButton")
 onready var _erase_button = find_node("EraseButton")
 onready var _color_picker = find_node("ColorPickerButton")
-onready var _resize_button = find_node("ResizeButton")
-onready var _resize_window = find_node("ResizeWindow")
+onready var _properties_button = find_node("PropertiesButton")
+onready var _properties_window = find_node("ImagePropertiesWindow")
 onready var _panel = find_node("Panel")
 onready var _stats_label = find_node("StatsLabel")
 
@@ -35,19 +35,19 @@ onready var _stats_label = find_node("StatsLabel")
 func _ready():
 	if Engine.editor_hint and is_standalone:
 		return
-	_image_size = image_texture.get_size()
-	assert(_image_size != Vector2.ZERO)
+	_properties_window.is_standalone = false
+	if image_texture.get_size() == Vector2.ZERO or image_texture.get_data() == null:
+		return
 	_pan_button.connect("pressed", self, "_change_state", [State.PAN])
 	_draw_button.connect("pressed", self, "_change_state", [State.DRAW])
 	_erase_button.connect("pressed", self, "_change_state", [State.ERASE])
-	_resize_button.connect("pressed", self, "_on_resize_button_pressed")
+	_properties_button.connect("pressed", self, "_on_properties_button_pressed")
 	_texture_rect.connect("gui_input", self, "_on_texture_rect_gui_input")
 	_panel.connect("gui_input", self, "_on_panel_gui_input")
 	_panel.connect("resized", self, "_on_panel_resized")
+	_properties_window.connect("image_properties_changed", self, "_on_image_properties_changed")
 	_change_state(State.PAN)
-	_local_texture = ImageTexture.new()
-	_local_texture.create_from_image(image_texture.get_data(), INTERNAL_TEXTURE_FLAGS)
-	_texture_rect.texture = _local_texture
+	_setup_local_texture()
 	_update_zoom_label()
 	_update_stats_label()
 
@@ -66,6 +66,13 @@ func _change_state(new_state):
 
 	if _state in state_to_button_mapping:
 		state_to_button_mapping[_state].find_node("Overlay").show()
+
+
+func _setup_local_texture():
+	_local_texture = ImageTexture.new()
+	_image = image_texture.get_data()
+	_local_texture.create_from_image(_image, INTERNAL_TEXTURE_FLAGS)
+	_texture_rect.texture = _local_texture
 
 
 func _update_zoom_label():
@@ -125,9 +132,9 @@ func _event_position_to_pixel_position(event_position):
 func _fill_pixel(pixel_position, color):
 	if (
 		pixel_position.x < 0
-		or pixel_position.x >= _image_size.x
+		or pixel_position.x >= _image.get_size().x
 		or pixel_position.y < 0
-		or pixel_position.y >= _image_size.y
+		or pixel_position.y >= _image.get_size().y
 	):
 		return
 	var image = _local_texture.get_data()
@@ -138,7 +145,6 @@ func _fill_pixel(pixel_position, color):
 	_local_texture.set_data(image)
 	image_texture.emit_changed()
 	_local_texture.emit_changed()
-	# editor_interface.save_scene()  # TODO: consider forcing save
 
 
 func _draw_at_pos(event_position):
@@ -156,7 +162,7 @@ func _set_zoom(zoom, mark_altered):
 	_zoom = max(1, zoom)
 	if mark_altered and _zoom != zoom_before:
 		_zoom_altered = true
-	_texture_rect.rect_min_size = _image_size * _zoom
+	_texture_rect.rect_min_size = _image.get_size() * _zoom
 	_texture_rect.rect_size = _texture_rect.rect_min_size
 	_texture_rect.material.set_shader_param("zoom", _zoom)
 	_update_zoom_label()
@@ -228,10 +234,21 @@ func _on_panel_resized():
 		and available_rect.y <= RECT_MARGIN_FOR_INITIAL_ZOOM * 2
 	):
 		available_rect -= Vector2(RECT_MARGIN_FOR_INITIAL_ZOOM, RECT_MARGIN_FOR_INITIAL_ZOOM) * 2
-	var desired_zoom_xy = available_rect / _image_size
+	var desired_zoom_xy = available_rect / _image.get_size()
 	var desired_zoom = floor(min(desired_zoom_xy.x, desired_zoom_xy.y))
 	_set_zoom(desired_zoom, false)
 
 
-func _on_resize_button_pressed():
-	_resize_window.popup_centered()
+func _on_properties_button_pressed():
+	_properties_window.image = _image
+	_properties_window.popup_centered()
+
+
+func _on_image_properties_changed(image):
+	_image = image
+	image_texture.create_from_image(_image, image_texture.flags)
+	_local_texture.create_from_image(_image, _local_texture.flags)
+	image_texture.emit_changed()
+	_local_texture.emit_changed()
+	_set_zoom(_zoom, false)
+	_update_stats_label()
